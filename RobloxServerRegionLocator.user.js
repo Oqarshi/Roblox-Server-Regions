@@ -8,8 +8,6 @@
 // @author       Oqarshi
 // @match        https://www.roblox.com/games/*
 // @grant        GM_xmlhttpRequest
-// @downloadURL https://update.greasyfork.org/scripts/522164/Roblox%20Region%20Locator.user.js
-// @updateURL https://update.greasyfork.org/scripts/522164/Roblox%20Region%20Locator.meta.js
 // ==/UserScript==
 
 (function() {
