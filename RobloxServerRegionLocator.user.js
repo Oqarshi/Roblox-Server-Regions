@@ -1,19 +1,20 @@
 // ==UserScript==
 // @name         Roblox Region Locator
 // @namespace    http://tampermonkey.net/
-// @version      9.1
+// @version      9.2
 // @description  AutoRegion Loading in Roblox Servers with City and Country Selection. RoPro, RoGold, and RoQol alternative.
 // @icon         https://raw.githubusercontent.com/Oqarshi/Invite/56a3ba9b892db9be0226d67868b056433e7e17e5/logo.png
 // @license      MIT
 // @author       Oqarshi
 // @match        https://www.roblox.com/games/*
 // @grant        GM_xmlhttpRequest
+// @downloadURL https://update.greasyfork.org/scripts/522164/Roblox%20Region%20Locator.user.js
+// @updateURL https://update.greasyfork.org/scripts/522164/Roblox%20Region%20Locator.meta.js
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    // yea ip servers idk why u want to looka t these but here i guess
     const serverRegionsByIp = {
         "128.116.0.0": {
             city: "Hong Kong",
@@ -1833,14 +1834,30 @@
         return servers.sort((a, b) => a.server.ping - b.server.ping);
     }
 
-    // Function to rebuild the server list. sry if this doesent work but it will trust no cap
-    async function rebuildServerList(gameId, fetchButton, totalLimit) {
-        // Remove the "Load More" button if it exists
-        const loadMoreButton = document.querySelector('.rbx-running-games-load-more');
-        if (loadMoreButton) {
-            loadMoreButton.remove();
-        }
+    async function fetchPlayerThumbnails(playerTokens) {
+        const body = playerTokens.map(token => ({
+            requestId: `0:${token}:AvatarHeadshot:150x150:png:regular`,
+            type: "AvatarHeadShot",
+            targetId: 0,
+            token,
+            format: "png",
+            size: "150x150",
+        }));
 
+        const response = await fetch("https://thumbnails.roblox.com/v1/batch", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            body: JSON.stringify(body),
+        });
+
+        const data = await response.json();
+        return data.data || [];
+    }
+
+    async function rebuildServerList(gameId, fetchButton, totalLimit) {
         const serverListContainer = document.getElementById("rbx-game-server-item-container");
         if (!serverListContainer) {
             console.error("Server list container not found!");
@@ -1848,8 +1865,6 @@
         }
 
         const messageElement = showMessage("Filtering servers, please wait...");
-
-        // Disable the filter button cause when clciekd again it messes up the page. ik im lazy with this
         fetchButton.disabled = true;
 
         try {
@@ -1867,7 +1882,8 @@
                     maxPlayers,
                     playing,
                     ping,
-                    fps
+                    fps,
+                    playerTokens
                 } = server;
 
                 let location;
@@ -1890,25 +1906,34 @@
                 }
 
                 if (location.city === "Unknown" || playing >= maxPlayers) {
-                    console.log(`Skipping server ${serverId} because it is full or location is unknown.`); // dumb roblox api made me do this :(
+                    console.log(`Skipping server ${serverId} because it is full or location is unknown.`);
                     skippedServers++;
                     continue;
                 }
 
+                // Fetch player thumbnails
+                const playerThumbnails = playerTokens && playerTokens.length > 0 ? await fetchPlayerThumbnails(playerTokens) : [];
+
                 serverDetails.push({
                     server,
-                    location
+                    location,
+                    playerThumbnails
                 });
 
-                messageElement.textContent = `Filtering servers, please do not leave this page...\n${totalServers} servers found, ${i + 1} server locations found`; // for some reason when i unfocus the page this slows down so yea idk why
+                messageElement.textContent = `Filtering servers, please do not leave this page...\n${totalServers} servers found, ${i + 1} server locations found`;
             }
 
             const loadedServers = totalServers - skippedServers;
-            messageElement.textContent = `Filtering complete!\n${totalServers} servers found, ${loadedServers} servers loaded, ${skippedServers} servers skipped (full).`; // yea idk why this is here but its just here and i wont remove it. it doesent even work damn
+            messageElement.textContent = `Filtering complete!\n${totalServers} servers found, ${loadedServers} servers loaded, ${skippedServers} servers skipped (full).`;
 
             // Add filter dropdowns
             const filterContainer = createFilterDropdowns(serverDetails);
             serverListContainer.parentNode.insertBefore(filterContainer, serverListContainer);
+
+            // Style the server list container to use a grid layout
+            serverListContainer.style.display = "grid";
+            serverListContainer.style.gridTemplateColumns = "repeat(4, 1fr)"; // 4 columns
+            serverListContainer.style.gap = "16px"; // Gap between cards
 
             const displayFilteredServers = (country, city) => {
                 serverListContainer.innerHTML = "";
@@ -1916,70 +1941,123 @@
                 const filteredServers = filterServers(serverDetails, country, city);
                 const sortedServers = sortServersByPing(filteredServers);
 
-                const totalServers = sortedServers.length;
-                const groupSize = Math.floor(totalServers / 3);
-                const remainder = totalServers % 3;
-
                 sortedServers.forEach(({
                     server,
-                    location
-                }, index) => {
+                    location,
+                    playerThumbnails
+                }) => {
                     const serverCard = document.createElement("li");
                     serverCard.className = "rbx-game-server-item col-md-3 col-sm-4 col-xs-6";
 
-                    // Remove any conflicting outline (e.g., from .highlighted class) yea chatgtp for the rescue here
-                    serverCard.style.outline = 'none'; // Clear any existing outline
+                    // Set consistent width and height for the server card
+                    serverCard.style.width = "100%"; // Take up full width of the grid cell
+                    serverCard.style.minHeight = "400px"; // Set a minimum height
+                    serverCard.style.display = "flex";
+                    serverCard.style.flexDirection = "column";
+                    serverCard.style.justifyContent = "space-between";
+                    serverCard.style.boxSizing = "border-box"; // Include padding and border in dimensions
+
+                    // Remove any conflicting outline (e.g., from .highlighted class)
+                    serverCard.style.outline = 'none';
 
                     // Determine the group and set the outline color
                     let outlineColor;
-                    if (index < groupSize + (remainder > 0 ? 1 : 0)) {
+                    if (server.ping < 100) {
                         outlineColor = 'green'; // Best ping
-                    } else if (index < 2 * groupSize + (remainder > 1 ? 1 : 0)) {
-                        outlineColor = 'orange'; // ehh ping
+                    } else if (server.ping < 200) {
+                        outlineColor = 'orange'; // Medium ping
                     } else {
-                        outlineColor = 'red'; // bad ping
+                        outlineColor = 'red'; // Bad ping
                     }
 
                     // Apply the new outline and outlineOffset
                     serverCard.style.outline = `3px solid ${outlineColor}`;
-                    serverCard.style.outlineOffset = '-6px'; // Bring the outline closer to the middle cause it overlaps
+                    serverCard.style.outlineOffset = '-6px';
+                    serverCard.style.padding = '6px';
+                    serverCard.style.borderRadius = '8px';
 
-                    // Add padding to prevent overlapping outlines
-                    serverCard.style.padding = '6px'; // Adjust this value as needed
-                    serverCard.style.borderRadius = '8px'; // round corners
+                    // Create a container for player thumbnails
+                    const thumbnailsContainer = document.createElement("div");
+                    thumbnailsContainer.className = "player-thumbnails-container";
+                    thumbnailsContainer.style.display = "grid";
+                    thumbnailsContainer.style.gridTemplateColumns = "repeat(3, 60px)"; // 3 columns
+                    thumbnailsContainer.style.gridTemplateRows = "repeat(2, 60px)"; // 2 rows
+                    thumbnailsContainer.style.gap = "5px";
+                    thumbnailsContainer.style.marginBottom = "10px";
 
-                    serverCard.innerHTML = `
-                        <div class="card-item">
-                            <div class="player-thumbnails-container">
-                                <div style="display: flex; flex-direction: column;">
-                                    <div class="ping-info" style="margin-bottom: 5px;">Ping: ${server.ping}ms</div>
-                                    <div class="location-info" style="margin-bottom: 5px;">${location.city}, ${location.country.name}</div>
-                                    <div class="fps-info">FPS: ${Math.round(server.fps)}</div>
-                                </div>
-                            </div>
-                            <div class="rbx-game-server-details game-server-details">
-                                <div class="text-info rbx-game-status rbx-game-server-status text-overflow">
-                                    ${server.playing} of ${server.maxPlayers} people max
-                                </div>
-                                <div class="server-player-count-gauge border">
-                                    <div class="gauge-inner-bar border" style="width: ${(server.playing / server.maxPlayers) * 100}%;"></div>
-                                </div>
-                                <span data-placeid="${gameId}">
-                                    <button type="button" class="btn-full-width btn-control-xs rbx-game-server-join game-server-join-btn btn-primary-md btn-min-width">Join</button>
-                                </span>
-                            </div>
+                    // Add player thumbnails to the container (max 5)
+                    const maxThumbnails = 5;
+                    const displayedThumbnails = playerThumbnails.slice(0, maxThumbnails);
+                    displayedThumbnails.forEach(thumb => {
+                        if (thumb && thumb.imageUrl) {
+                            const img = document.createElement("img");
+                            img.src = thumb.imageUrl;
+                            img.className = "avatar-card-image";
+                            img.style.width = "60px";
+                            img.style.height = "60px";
+                            img.style.borderRadius = "50%";
+                            thumbnailsContainer.appendChild(img);
+                        }
+                    });
+
+                    // Add a placeholder for hidden players
+                    const hiddenPlayers = server.playing - displayedThumbnails.length;
+                    if (hiddenPlayers > 0) {
+                        const placeholder = document.createElement("div");
+                        placeholder.className = "avatar-card-image";
+                        placeholder.style.width = "60px";
+                        placeholder.style.height = "60px";
+                        placeholder.style.borderRadius = "50%";
+                        placeholder.style.backgroundColor = "#BDBEBE80"; // Dark gray background
+                        placeholder.style.display = "flex";
+                        placeholder.style.alignItems = "center";
+                        placeholder.style.justifyContent = "center";
+                        placeholder.style.color = "#fff"; // White text
+                        placeholder.style.fontSize = "14px";
+                        placeholder.textContent = `+${hiddenPlayers}`;
+                        thumbnailsContainer.appendChild(placeholder);
+                    }
+
+                    // Server card content
+                    const cardItem = document.createElement("div");
+                    cardItem.className = "card-item";
+                    cardItem.style.display = "flex";
+                    cardItem.style.flexDirection = "column";
+                    cardItem.style.justifyContent = "space-between";
+                    cardItem.style.height = "100%"; // Ensure the card content takes up the full height
+
+                    cardItem.innerHTML = `
+                    <!-- Player thumbnails at the top -->
+                    ${thumbnailsContainer.outerHTML}
+                    <div class="rbx-game-server-details game-server-details">
+                        <div class="text-info rbx-game-status rbx-game-server-status text-overflow">
+                            ${server.playing} of ${server.maxPlayers} people max
                         </div>
-                    `;
+                        <div class="server-player-count-gauge border">
+                            <div class="gauge-inner-bar border" style="width: ${(server.playing / server.maxPlayers) * 100}%;"></div>
+                        </div>
+                        <span data-placeid="${gameId}">
+                            <button type="button" class="btn-full-width btn-control-xs rbx-game-server-join game-server-join-btn btn-primary-md btn-min-width">Join</button>
+                        </span>
+                    </div>
+                    <!-- Generated info (ping, location, FPS) at the bottom -->
+                    <div style="margin-top: 10px; text-align: center;">
+                        <div class="ping-info">Ping: ${server.ping}ms</div>
+                        <div class="location-info">${location.city}, ${location.country.name}</div>
+                        <div class="fps-info">FPS: ${Math.round(server.fps)}</div>
+                    </div>
+                `;
 
-                    const joinButton = serverCard.querySelector(".rbx-game-server-join");
+                    const joinButton = cardItem.querySelector(".rbx-game-server-join");
                     joinButton.addEventListener("click", () => {
-                        window.open(`https://oqarshi.github.io/Invite/?placeid=${gameId}&serverid=${server.id}`, "_blank"); // oh yea my own server :) using deeplinks like ropro does
+                        window.open(`https://oqarshi.github.io/Invite/?placeid=${gameId}&serverid=${server.id}`, "_blank");
                     });
 
                     const container = adjustJoinButtonContainer(joinButton);
                     const inviteButton = createInviteButton(gameId, server.id);
                     container.appendChild(inviteButton);
 
+                    serverCard.appendChild(cardItem);
                     serverListContainer.appendChild(serverCard);
                 });
             };
@@ -2003,13 +2081,12 @@
                 hideMessage();
             }, 3000);
         } catch (error) {
-            console.error("Error rebuilding server list:", error); // yea giant error cause im lazy
-            messageElement.textContent = "An error occurred while filtering servers. Please try again. This may be because you did not grant the script access to cross-origin resources. Reinstall the script and click 'Allow Always' when prompted. Another reason might be that the autorun server count is set to an invalid amount. It should be between 1 and 100. If it's not, this error will appear. Thank you! - Oqarshi";
+            console.error("Error rebuilding server list:", error);
+            messageElement.textContent = "An error occurred while filtering servers. Please try again.";
         } finally {
-            console.log("Done filtering");
+            fetchButton.disabled = false;
         }
     }
-
     // Function to create and append the Invite button
     function createInviteButton(placeId, serverId) { // too lazy to comment this function tbh just ready the name
         const inviteButton = document.createElement('button');
