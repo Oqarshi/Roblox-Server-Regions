@@ -9,7 +9,7 @@ This script is no longer maintained. A newer, improved version is available here
 ## **Overview**  
 This userscript retrieves the server details of a specified number of servers for your selected Roblox game, identifies their locations, and allows you to organize them by region to optimize your ping. It offers a free, open-source alternative to paid Roblox extensions like RoPro, RoGold, and RoQoL.
 
-Also available at [Greasyfork](https://greasyfork.org/en/scripts/522164-roblox-region-locator)
+Also available at [Greasyfork](https://greasyfork.org/en/scripts/523727-rolocate)
 
 ---
 
