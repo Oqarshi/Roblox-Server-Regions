@@ -1,7 +1,13 @@
+# **⚠️ OUTDATED - Please Use the New Script**  
+This script is no longer maintained. A newer, improved version is available here:  
+👉 [https://greasyfork.org/en/scripts/523727-rolocate](https://greasyfork.org/en/scripts/523727-rolocate)
+
+---
+
 # **Roblox Server Regions - UserScript**
 
 ## **Overview**  
-This userscript retrieves the server details of a specified number of servers for your selected Roblox game, identifies their locations, and allows you to organize them by region to optimize your ping. It offers a free, open-source alternative to paid Roblox extensions like RoPro, RoGold, and RoQoL..
+This userscript retrieves the server details of a specified number of servers for your selected Roblox game, identifies their locations, and allows you to organize them by region to optimize your ping. It offers a free, open-source alternative to paid Roblox extensions like RoPro, RoGold, and RoQoL.
 
 Also available at [Greasyfork](https://greasyfork.org/en/scripts/522164-roblox-region-locator)
 
@@ -44,7 +50,7 @@ Also available at [Greasyfork](https://greasyfork.org/en/scripts/522164-roblox-r
 
 ### Steps  
 1. Open your userscript manager and create a new script.  
-2. Pastethe script code into the editor or click install on this page.  
+2. Paste the script code into the editor or click install on this page.  
 3. Save and enable the userscript.  
 
 ---
@@ -52,8 +58,8 @@ Also available at [Greasyfork](https://greasyfork.org/en/scripts/522164-roblox-r
 ## **Usage**  
 
 1. Go to any Roblox game page (e.g., [Phantom Forces](https://www.roblox.com/games/292439477/Christmas-Update-Phantom-Forces)).  
-2. Click the **"Filter Server Region"** button to start the filtering process. 
-3. Select the **amount** of servers you want to search for.
+2. Click the **"Filter Server Region"** button to start the filtering process.  
+3. Select the **amount** of servers you want to search for.  
 4. Use the dropdown menus to refine your server selection by **country** and **city**.  
 5. Copy invite links by clicking the **"Invite"** button on any server card.  
 
@@ -88,9 +94,10 @@ This userscript is compatible with the following verified Roblox extensions:
 
 ## **Credits**  
 
-- **Referenced Code**: Special thanks to the **BTRoblox Team** for their valuable open-source extension, available on [GitHub](https://github.com/AntiBoomz/BTRoblox). ❤️    
+- **Referenced Code**: Special thanks to the **BTRoblox Team** for their valuable open-source extension, available on [GitHub](https://github.com/AntiBoomz/BTRoblox). ❤️  
 - **Live Server Updates**: Data sourced from [BGP.he.net - AS22697](https://bgp.he.net/AS22697#_prefixes).  
 - **Location Identification Method**: Based on a guide by **Duduble**, available on the [Roblox Developer Forum](https://devforum.roblox.com/t/how-to-find-the-server-region-from-the-website/2862705/5).  
 - **Additional Insights**: Thanks to **TheShowCaseMaker** for their comprehensive list of server IPs and ranges, found on the [Roblox Developer Forum](https://devforum.roblox.com/t/all-roblox-server-ips-and-ranges/1802411).  
 - **Code Inspiration**: Shoutout to **IsDatYoMama10** also known as **Exilon24** for his project, [RobloxServerFinder](https://github.com/Exilon24/RobloxServerFinder).  
 - **Author**: Developed by **Oqarshi**.
+
